@@ -1,0 +1,205 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.IO;
+
+namespace Arranger
+{
+    public partial class Form1 : Form
+    {
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+        public char Delimiter = '&';
+        public char ValueSeparator = '=';
+        public string[] Template;
+
+        private void bArrange_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                setTemplate();
+
+                bool addNewLines = chkOutputNewLine.Checked;
+                bool removeValues = chkRemoveValues.Checked;
+
+                string[] Input = getThatArray(txtInput.Text.Replace("\n", ""));
+                ElementFound[] ElementFinder = new ElementFound[Input.Length];
+
+                for (int i = 0; i < Input.Length; i++)
+                {
+                    string[] Components = Input[i].Split(new char[] { ValueSeparator });
+                    ElementFinder[i].Key = Components[0];
+                    ElementFinder[i].Value = Components[1];
+                    ElementFinder[i].Found = false;
+                }
+
+                string outputString = string.Empty;
+                string notFoundTempString = string.Empty;
+
+                for (int i = 0; i < Template.Length; i++)
+                {
+                    bool foundIt = false;
+
+                    for (int z = 0; z < ElementFinder.Length; z++)
+                    {
+                        if (!ElementFinder[z].Found)
+                        {
+                            string Key = ElementFinder[z].Key;
+                            string Value = ElementFinder[z].Value;
+
+                            if (Key.ToLower().Contains(Template[i].ToLower().Replace("=", "")))
+                            {
+                                string stringToWrite = (i == 0 ? "" : Delimiter.ToString()) + Key + ValueSeparator + (removeValues ? "" : Value) + (addNewLines ? "\n" : "");
+
+                                outputString += stringToWrite;
+
+                                foundIt = true;
+                                ElementFinder[z].Found = true;
+
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!foundIt)
+                    {
+                        notFoundTempString += (i == 0 ? "" : Delimiter.ToString()) + Template[i] + (addNewLines ? "\n" : "");
+                    }
+                }
+
+                string notFoundInputString = string.Empty;
+                foreach (var ElementFound in ElementFinder)
+                {
+                    if (!ElementFound.Found)
+                    {
+                        string Key = ElementFound.Key;
+                        string Value = ElementFound.Value;
+                        notFoundInputString += Delimiter.ToString() + Key + ValueSeparator + (removeValues ? "" : Value) + (addNewLines ? "\n" : "");
+                    }
+                }
+
+                txtOutput.Text = outputString;
+                txtNotFoundTemp.Text = notFoundTempString;
+                txtNotFoundInput.Text = notFoundInputString;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error handling not set up.\nThe following exception occurred:\n\n" + ex.StackTrace.ToString());
+                return;
+            }
+        }
+
+        private struct ElementFound
+        {
+            public string Key;
+            public string Value;
+            public bool Found;
+        }
+
+        private string[] getThatArray(string arrayString)
+        {
+            return arrayString.Split(Delimiter); 
+        }
+
+        private void setTemplate()
+        {
+
+            Delimiter = Convert.ToChar(txtDelimiter.Text);
+            ValueSeparator = Convert.ToChar(txtValueSeparator.Text);
+
+            Template = getThatArray(txtTemp.Text);
+
+            for (int i = 0; i < Template.Length; i++)
+            {
+                string[] Components = Template[i].Split(new char[] { ValueSeparator });
+
+                if (i != 0)
+                {
+                    Template[i] += Delimiter;
+                }
+
+                Template[i] =  Components[0] + ValueSeparator;
+
+                
+            }
+        }
+
+        private void bTemplatize_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                setTemplate();
+
+                bool addNewLines = chkTempNewLine.Checked;
+
+                string TemplateString = string.Empty;
+                for (int i = 0; i < Template.Length; i++)
+                {
+                    TemplateString += (i == 0 ? "" : Delimiter.ToString()) + Template[i].ToString();
+                    
+                    if (addNewLines)
+                    {
+                        TemplateString += '\n';
+                    }
+                }
+
+                txtTemp.Text = TemplateString;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error handling not set up.\nThe following error occurred:\n\n" + ex.StackTrace.ToString());
+                return;
+            }
+        }
+
+        private void bClear_Click(object sender, EventArgs e)
+        {
+            txtInput.Clear();
+            txtOutput.Clear();
+            txtNotFoundTemp.Clear();
+            txtNotFoundInput.Clear();
+        }
+
+        private void bClearTemp_Click(object sender, EventArgs e)
+        {
+            txtDelimiter.Text = "&";
+            txtValueSeparator.Text = "=";
+            txtTemp.Clear();
+            Delimiter = '&';
+            ValueSeparator = '=';
+            Template = null;
+        }
+
+        private void bBrowseTemp_Click(object sender, EventArgs e)
+        {
+            txtTemp.Text = getThatFileStream();
+        }
+
+        private void bBrowseInput_Click(object sender, EventArgs e)
+        {
+            txtInput.Text = getThatFileStream();
+        }
+
+        private string getThatFileStream()
+        {
+            openFileDialog1.ShowDialog();
+            Stream s = openFileDialog1.OpenFile();
+            StreamReader sr = new StreamReader(s);
+            string lol = "";
+            while (!sr.EndOfStream)
+            {
+                lol += sr.ReadLine();
+            }
+            return lol;
+        }
+    }
+}
